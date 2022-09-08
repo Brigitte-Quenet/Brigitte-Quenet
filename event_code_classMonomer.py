@@ -29,7 +29,7 @@ else:
     k_BT = 100
 
     mols = pc.Monomers(NumberOfMonomers, L_xMin, L_xMax, L_yMin, L_yMax, NumberMono_per_kind, Radiai_per_kind, Densities_per_kind, k_BT )
-    
+
 mols.snapshot( FileName = Snapshot_output_dir+'/InitialConf.png', Title = '$t = 0$')
 #we could initialize next_event, but it's not necessary
 #next_event = pc.CollisionEvent( Type = 'wall or other, to be determined', dt = 0, m_1 = 0, m_2 = 0, w_dir = 0)
@@ -56,12 +56,12 @@ def MolecularDynamicsLoop( frame ):
         mols.compute_new_velocities( next_event )
         #mols.snapshot( FileName = Snapshot_output_dir + '/Conf_t%.8f_1.png' % t, Title = '$t = %.8f$' % t)
         next_event = mols.compute_next_event()
-    
-    remain_t = t_next_frame - t #equal dt if no event between frames
+
+    remain_t = t_next_frame - t #equals dt if no event between frames
     mols.pos += mols.vel * remain_t
     t += remain_t
     next_event.dt -= remain_t
-    
+
     plt.title( '$t = %.4f$, remaining frames = %d' % (t, NumberOfFrames-(frame+1)) )
     collection.set_offsets( mols.pos )
     return collection

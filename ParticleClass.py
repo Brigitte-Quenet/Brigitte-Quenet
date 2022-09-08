@@ -4,7 +4,7 @@ from matplotlib.collections import EllipseCollection
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import pickle
-            
+
 class CollisionEvent:
     """
     Object contains all information about a collision event
@@ -30,14 +30,14 @@ class CollisionEvent:
         self.m_1 = m_1
         self.m_2 = m_2  # only importent for interparticle collisions
         self.w_dir = w_dir # only important for wall collisions
-        
-        
+
+
     def __str__(self):
         if self.Type == 'wall':
             return "Event type: {:s}, dt: {:.8f}, p1 = {:d}, dim = {:d}".format(self.Type, self.dt, self.m_1, self.w_dir)
         else:
             return "Event type: {:s}, dt: {:.8f}, p1 = {:d}, p2 = {:d}".format(self.Type, self.dt, self.m_1, self.m_2)
-        
+
     def __iter__(self):
         #not used anywhere! Just here because: interesting!
         #python2 self.__dict__.iteritems()
@@ -56,7 +56,7 @@ class Monomers:
     $E = \sum_i^N m_i / 2 (v_i)^2 = N d/2 k_B T$, with $d$ being the dimension,
     $k_B$ the Boltzmann constant, and $T$ the temperature.
     -Class contains all functions for an event-driven molecular dynamics (MD)
-    simulation. Essentail for inter-particle collsions is the mono_pair array,
+    simulation. Essential for inter-particle collisions is the mono_pair array,
     which book-keeps all combinations without repetition of particle-index
     pairs for inter-particles collisions, e.g. for $N = 3$ particles
     indices = 0, 1, 2
@@ -93,20 +93,20 @@ class Monomers:
             self.mono_pairs = np.array( [ (k,l) for k in range(self.NM) for l in range( k+1,self.NM ) ] )
             self.next_wall_coll = CollisionEvent( 'wall', 0, 0, 0, 0)
             self.next_mono_coll = CollisionEvent( 'mono', 0, 0, 0, 0)
-        
+
             self.__assignRadiaiMassesVelocities(NumberMono_per_kind, Radiai_per_kind, Densities_per_kind, k_BT )
             self.__assignRandomMonoPos( )
-            
+
     def __getitem__(self, index):
         #not used anywhere! Just here because: interesting!
         #to use call mono[i], where mono = Monomers(...)
         return self.pos[index], self.vel[index], self.rad[index], self.mass[index]
-    
+
     def save_configuration(self, FilePath = 'MonomerConfiguration.p'):
         '''Saves configuration. Callable at any time during simulation.'''
         #print( self.__dict__ )
         pickle.dump( self.__dict__, open( FilePath, 'wb' ) )
-    
+
     def __assignRadiaiMassesVelocities(self, NumberMono_per_kind = np.array([4]), Radiai_per_kind = 0.5*np.ones(1), Densities_per_kind = np.ones(1), k_BT = 1 ):
         '''
         Private function -> cannot be called outside class definition.
@@ -120,17 +120,17 @@ class Monomers:
             self.rad[ Tot_init : Tot_init+nm_per_r_i] = Radiai_per_kind[i]
             self.mass[ Tot_init : Tot_init+nm_per_r_i] = Densities_per_kind[i]*np.pi*Radiai_per_kind[i]**2
             Tot_init += nm_per_r_i
-        
+
         '''initialize velocities'''
         assert( k_BT > 0 )
         # E_kin = sum_i m_i /2 v_i^2 = N * dim/2 k_BT https://en.wikipedia.org/wiki/Ideal_gas_law#Energy_associated_with_a_gas
         mass_velSq = self.DIM * k_BT
         RandomOrientation = np.random.uniform( 0, 2.*np.pi, self.NM )
         NormedVelocity = np.vstack( (np.cos(RandomOrientation), np.sin(RandomOrientation)) ).T
-        
+
         self.vel = np.sqrt( mass_velSq / self.mass[:,None] ) * NormedVelocity
-        
-    
+
+
     def __assignRandomMonoPos(self, start_index = 0 ):
         '''
         Private function -> cannot be called outside class definition.
@@ -153,14 +153,14 @@ class Monomers:
         if p_new != self.NM:
             print('Failed to initialize all particle positions.\nIncrease simulation box size!')
             exit()
-    
+
     def __str__(self, index = 'all'):
         if index == 'all':
             return "\nMonomers with:\nposition = " + str(self.pos) + "\nvelocity = " + str(self.vel) + "\nradius = " + str(self.rad) + "\nmass = " + str(self.mass)
             #return "Particle with r = [{:.2f}, {:.2f}], v = [{:.2f}, {:.2f}]".format(self.pos[0], self.pos[1], self.vel[0], self.vel[1])
         else:
             return "\nMonomer at index = " + str(index) + " with:\nposition = " + str(self.pos[index]) + "\nvelocity = " + str(self.vel[index]) + "\nradius = " + str(self.rad[index]) + "\nmass = " + str(self.mass[index])
-    
+
     def snapshot(self, FileName = './snapshot.png', Title = '$t = $?'):
         '''
         Function saves a snapshot of current configuration,
@@ -181,7 +181,7 @@ class Monomers:
         ax.set_aspect('equal')
         ax.set_xlabel('$x$ position')
         ax.set_ylabel('$y$ position')
-        
+
         #--->plot monomer positions as circles
         MonomerColors = np.linspace( 0.2, 0.95, self.NM)
         Width, Hight, Angle = 2*self.rad, 2*self.rad, np.zeros( self.NM )
@@ -193,11 +193,11 @@ class Monomers:
 
         #--->plot velocities as arrows
         ax.quiver( self.pos[:,0], self.pos[:,1], self.vel[:,0], self.vel[:,1] , units = 'dots', scale_units = 'dots')
-        
+
         plt.title(Title)
         plt.savefig(FileName)
         plt.close()
-    
+
     def Wall_time(self):
         '''
         -Function computes list of remaining time dt until future
@@ -210,24 +210,24 @@ class Monomers:
         '''
         # if velocity > 0 -> collision with Max, else collision with min
         coll_dist_list = (self.BoxLimMax - self.rad[:,None]) * (self.vel > 0) + (self.BoxLimMin + self.rad[:,None]) * (self.vel < 0)
-        
+
         # collision time in x and y direction
         dt_list = (coll_dist_list - self.pos) / self.vel
-        
+
         # find particle with min collision time and the corresponding direction
         collision_disk, wall_direction = divmod( dt_list.argmin(), self.DIM )
         minCollTime = dt_list[ collision_disk ][ wall_direction ]
-        
+
         self.next_wall_coll.dt = minCollTime
         self.next_wall_coll.m_1 = collision_disk
         #self.next_wall_coll.m_2 = not necessary
         self.next_wall_coll.w_dir = wall_direction
-        
-        
+
+
     def Mono_pair_time(self):
         '''
         - Function computes list of remaining time dt until
-        future external collition between all combinations of
+        future external collision between all combinations of
         monomer pairs without repetition. Then, it stores
         collision parameters of the event with
         the smallest dt in the object next_mono_coll.
@@ -237,13 +237,13 @@ class Monomers:
         P_i = self.mono_pairs[:,0] # List of collision partner 1
         P_j = self.mono_pairs[:,1] # List of collision partner 2
         CollisionDist_sq = (self.rad[P_i] + self.rad[P_j])**2 # distance squared at which collision partners touch
-        
+
         del_VecPos = self.pos[P_i] - self.pos[P_j] # r_i - r_j
         del_VecVel = self.vel[P_i] - self.vel[P_j] # v_i - v_j
-        
+
         del_VecPos_sq = (del_VecPos**2).sum(1) #|dr|^2
         del_VecVel_sq = (del_VecVel**2).sum(1) #|dv|^2
-        
+
         # solve quadratic equation of collision time
         # only minus solution is relevant
         InitDist = del_VecPos_sq - CollisionDist_sq # initial distance
@@ -253,22 +253,22 @@ class Monomers:
         RequiredCondition = ((scal < 0) & (Omega > 0))
         DismissCondition = np.logical_not( RequiredCondition )
         #DismissCondition = ((scal >= 0) | (Omega <= 0)) # alternative to two previous lines
-        
+
         scal[DismissCondition] = -np.inf
         Omega[DismissCondition] = 0
         del_t = ( scal + np.sqrt(Omega) ) / (-2*del_VecVel_sq)
-        
+
         # find index of min collision time
         # return corresponding time and collision partners
         indexMinTime = np.argmin( del_t )
         minCollTime = del_t[indexMinTime]
         collision_disk_1, collision_disk_2 = self.mono_pairs[indexMinTime]
-        
+
         self.next_mono_coll.dt = minCollTime
         self.next_mono_coll.m_1 = collision_disk_1
         self.next_mono_coll.m_2 = collision_disk_2
         #self.next_mono_coll.w_dir = not necessary
-        
+
     def compute_next_event(self):
         '''
         Function gets event information about:
@@ -279,12 +279,12 @@ class Monomers:
         '''
         self.Wall_time()
         self.Mono_pair_time()
-        
+
         if self.next_wall_coll.dt < self.next_mono_coll.dt:
             return self.next_wall_coll
         else:
             return self.next_mono_coll
-            
+
     def compute_new_velocities(self, next_event):
         '''
         Function updates the velocities of the monomer(s)
@@ -293,26 +293,26 @@ class Monomers:
         Ellastic wall collisions in x direction reverse vx.
         Ellastic pair collisions follow: https://en.wikipedia.org/wiki/Elastic_collision#Two-dimensional_collision_with_two_moving_objects
         '''
-        
+
         if next_event.Type == 'wall':
             mono_index = next_event.m_1
             wall_direction = next_event.w_dir
-            
+
             self.vel[mono_index][wall_direction] *= -1.0
         else:
             mono_1 = next_event.m_1
             mono_2 = next_event.m_2
-            
+
             del_pos = self.pos[mono_2] - self.pos[mono_1]
             abs_pos = np.linalg.norm(del_pos)
             del_pos /= abs_pos
-            
+
             del_vel = self.vel[mono_2] - self.vel[mono_1]
             scal = 2./(self.mass[mono_1] + self.mass[mono_2]) * np.inner( del_vel, del_pos)
-            
+
             self.vel[mono_1] += del_pos * scal * self.mass[mono_2]
             self.vel[[mono_2]] -= del_pos * scal * self.mass[mono_1]
-        
+
 class Dimers(Monomers):
     """
     --> Class derived from Monomers.
@@ -370,7 +370,7 @@ class Dimers(Monomers):
             mono_i, mono_j = self.dimer_pairs[:,0], self.dimer_pairs[:,1]
             self.bond_length = bond_length_scale * ( self.rad[mono_i] + self.rad[mono_j] )
             self.next_dimer_coll = CollisionEvent( 'dimer', 0, 0, 0, 0)
-            
+
             '''
             Positions initialized as pure monomer system by monomer __init__.
             ---> Reinitalize all monomer positions, but place dimer pairs first
@@ -378,11 +378,11 @@ class Dimers(Monomers):
             '''
             self.__assignRandomDimerPos()
             self._Monomers__assignRandomMonoPos( 2*NumberOfDimers )
-    
+
     def __assignRandomDimerPos(self):
         '''
         this is a private function -> cannot be called outside class definition
-        initialize random positions without overlap between monomers and wall
+        initialize random positions without overlap between dimers and wall
         '''
         dimer_new_index, infiniteLoopTest = 0, 0
         BoxLength = self.BoxLimMax - self.BoxLimMin
@@ -391,7 +391,7 @@ class Dimers(Monomers):
             mono_i, mono_j = dimer_new = self.dimer_pairs[dimer_new_index]
             min_dimer_dist = self.rad[mono_i] + self.rad[mono_j]
             max_dimer_dist = self.bond_length[dimer_new_index]
-            
+
             #place mono_i inside simulation box
             self.pos[mono_i] = np.random.uniform( self.BoxLimMin+self.rad[mono_i,None], self.BoxLimMax-self.rad[mono_i,None])
             #place mono_j in correct distance and inside box
@@ -403,7 +403,7 @@ class Dimers(Monomers):
                 randomAngle = np.random.rand()*2*np.pi
                 randomDist = np.random.uniform(min_dimer_dist, max_dimer_dist)
                 self.pos[mono_j] = self.pos[mono_i] + randomDist * np.array([np.cos(randomAngle), np.sin(randomAngle)])
-            
+
             NoOverlap = True
             for dimer_old in self.dimer_pairs[:dimer_new_index]:
                 if not NoOverlap: break
@@ -411,17 +411,17 @@ class Dimers(Monomers):
                 mono_1, mono_2 = MonoIndexPermutations[:,0], MonoIndexPermutations[:,1]
                 minDist = self.rad[mono_1]+self.rad[mono_2]
                 dist = np.linalg.norm(self.pos[mono_1]-self.pos[mono_2], axis = 1)
-                
+
                 if min(dist-minDist) < 0: NoOverlap = False
-                    
+
             if NoOverlap:
                 dimer_new_index += 1
                 infiniteLoopTest = 0
         if dimer_new_index != self.ND:
             print('Failed to initialize all dimer positions.\nIncrease simulation box size!')
             exit()
-        
-        
+
+
     def __str__(self, index = 'all'):
         if index == 'all':
             return Monomers.__str__(self) + "\ndimer pairs = " + str(self.dimer_pairs) + "\nwith max bond length = " + str(self.bond_length)
@@ -438,13 +438,13 @@ class Dimers(Monomers):
         P_i = self.dimer_pairs[:,0] # List of collision partner 1
         P_j = self.dimer_pairs[:,1] # List of collision partner 2
         CollisionDist_sq = self.bond_length**2# distance squared at which collision partners touch
-        
+
         del_VecPos = self.pos[P_i] - self.pos[P_j] # r_i - r_j
         del_VecVel = self.vel[P_i] - self.vel[P_j] # v_i - v_j
-        
+
         del_VecPos_sq = (del_VecPos**2).sum(1) #|dr|^2
         del_VecVel_sq = (del_VecVel**2).sum(1) #|dv|^2
-        
+
         # solve quadratic equation of collision time
         # only minus solution is relevant
         InitDist = np.minimum( del_VecPos_sq - CollisionDist_sq, 0 )# initial distance
@@ -452,22 +452,22 @@ class Dimers(Monomers):
         #np.minimum to ensure Omega >= 0
         scal = 2 * (del_VecPos * del_VecVel).sum(1) # 2( dr \cdot dv )
         Omega = scal**2 - 4.* del_VecVel_sq * InitDist # > 0, if (InitDist <= 0)
-        
+
         del_t = ( -scal + np.sqrt(Omega) ) / (2*del_VecVel_sq)
-        
+
         # find index of min collision time
         # return corresponding time and collision partners
         indexMinTime = np.argmin( del_t )
         minCollTime = del_t[indexMinTime]
         collision_disk_1, collision_disk_2 = self.dimer_pairs[indexMinTime]
-        
+
         self.next_dimer_coll.dt = minCollTime
         self.next_dimer_coll.m_1 = collision_disk_1
         self.next_dimer_coll.m_2 = collision_disk_2
         #self.next_dimer_coll.w_dir = not necessary
-        
+
         #return minCollTime, collision_disk_1, collision_disk_2
-    
+
     def snapshot(self, FileName = './snapshot.png', Title = ''):
         '''
         ---> Overwriting snapshot(...) of Monomers class!
@@ -490,7 +490,7 @@ class Dimers(Monomers):
         ax.set_aspect('equal')
         ax.set_xlabel('$x$ position')
         ax.set_ylabel('$y$ position')
-        
+
         #--->plot monomer positions as circles
         COLORS = np.linspace(0.2,0.95,self.ND+1)
         MonomerColors = np.ones(self.NM)*COLORS[-1] #unique color for monomers
@@ -505,7 +505,7 @@ class Dimers(Monomers):
         collection.set_array(MonomerColors)
         collection.set_clim(0, 1) # <--- we set the limit for the color code
         ax.add_collection(collection)
-        
+
         #plot bond length of dimers as black cicles
         Width, Hight, Angle = self.bond_length, self.bond_length, np.zeros( self.ND )
         mono_i = self.dimer_pairs[:,0]
@@ -519,12 +519,12 @@ class Dimers(Monomers):
 
         #--->plot velocities as arrows
         ax.quiver( self.pos[:,0], self.pos[:,1], self.vel[:,0], self.vel[:,1] , units = 'dots', scale_units = 'dots')
-        
+
         plt.title(Title)
         plt.savefig( FileName)
         plt.close()
 
-    
+
     def compute_next_event(self):
         '''
         function gets event info about:
@@ -536,11 +536,10 @@ class Dimers(Monomers):
         self.Wall_time()
         self.Mono_pair_time()
         self.Dimer_pair_time()
-        
+
         if self.next_wall_coll.dt < min(self.next_mono_coll.dt, self.next_dimer_coll.dt):
             return self.next_wall_coll
         elif (self.next_mono_coll.dt < self.next_dimer_coll.dt):
             return self.next_mono_coll
         else:
             return self.next_dimer_coll
-        
